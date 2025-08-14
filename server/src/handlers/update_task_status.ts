@@ -1,16 +1,29 @@
+import { db } from '../db';
+import { tasksTable } from '../db/schema';
 import { type UpdateTaskStatusInput, type Task } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export const updateTaskStatus = async (input: UpdateTaskStatusInput): Promise<Task> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is updating only the status of a task (pending/completed).
-    // This is a specialized handler for quick status toggles in the UI.
-    // Should update the updated_at timestamp and throw an error if task doesn't exist.
-    return Promise.resolve({
-        id: input.id,
-        title: 'Task Title', // Placeholder
-        description: null,
+  try {
+    // Update the task status and updated_at timestamp
+    const result = await db.update(tasksTable)
+      .set({
         status: input.status,
-        created_at: new Date(),
-        updated_at: new Date()
-    } as Task);
+        updated_at: new Date() // Explicitly update the timestamp
+      })
+      .where(eq(tasksTable.id, input.id))
+      .returning()
+      .execute();
+
+    // Check if task was found and updated
+    if (result.length === 0) {
+      throw new Error(`Task with id ${input.id} not found`);
+    }
+
+    // Return the updated task
+    return result[0];
+  } catch (error) {
+    console.error('Task status update failed:', error);
+    throw error;
+  }
 };
